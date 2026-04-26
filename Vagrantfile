@@ -27,10 +27,10 @@ Vagrant.configure("2") do |config|
     # Указываем уникальный IP и ту же маску, чтобы они были в одной сети
     ollama.vm.network "private_network", ip: "10.77.133.3", netmask: "255.255.255.240"
 	ollama.vm.network "public_network", bridge: "Intel(R) Dual Band Wireless-AC 3165"
-    ollama.vm.provider "ollama" do |vb|
-      vb.name = "Project-DB"
+    ollama.vm.provider "virualbox" do |vb|
+      vb.name = "ollama"
       vb.memory = "2048"
-      vb.cpus = 2
+      vb.cpus = 1
     end
   end
 
