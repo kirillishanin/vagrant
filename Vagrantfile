@@ -53,7 +53,7 @@ Vagrant.configure("2") do |config|
     wikijs.vm.box = "ubuntu/jammy64"
     wikijs.vm.hostname = "wikijs"
     # Указываем IP и маску
-    wikijs.vm.network "private_network", ip: "10.77.133.5"						Qwa", netmask: "255.255.255.240"
+    wikijs.vm.network "private_network", ip: "10.77.133.5", netmask: "255.255.255.240"
 	wikijs.vm.network "public_network", bridge: "Intel(R) Dual Band Wireless-AC 3165"
     wikijs.vm.provider "virtualbox" do |vb|
       vb.name = "wikijs"
