@@ -29,8 +29,8 @@ Vagrant.configure("2") do |config|
 	ollama.vm.network "public_network", bridge: "Intel(R) Dual Band Wireless-AC 3165"
     ollama.vm.provider "virualbox" do |vb|
       vb.name = "ollama"
-      vb.memory = "2048"
-      vb.cpus = 1
+      vb.memory = "4096"
+      vb.cpus = 2
     end
   end
 
