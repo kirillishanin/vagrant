@@ -25,7 +25,7 @@ Vagrant.configure("2") do |config|
     ollama.vm.box = "ubuntu/jammy64"
     ollama.vm.hostname = "ollama"
     # Указываем уникальный IP и ту же маску, чтобы они были в одной сети
-    ollama.vm.network "private_network", ip: "уч", netmask: "255.255.255.240"
+    ollama.vm.network "private_network", ip: "10.77.133.3", netmask: "255.255.255.240"
 	  ollama.vm.network "public_network", bridge: "Intel(R) Dual Band Wireless-AC 3165"
     ollama.vm.provider "virtualbox" do |vb|
       vb.name = "ollama"
