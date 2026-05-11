@@ -1,0 +1,19 @@
+services:
+  ollama:
+   #используем оф.образ с Docker hub
+    image: ollama/ollama:latest
+    container_name: ollama
+   #Перезагружаем контейнер автоматически при сбое или перезагрузке системы
+    restart: unless-stopped
+    #Пробрасываем порт:
+    ports:
+      - "11434:11434"
+    environment:
+        #Разрешаем Ollama принимать запросы не только внтури контейнера но и всех сетевых интерфейсов
+      - OLLAMA_HOST=0.0.0.0
+      #Снимаем ограничения CORS. Это нужно, чтобы API Ollama отвечал внешним интеграциям
+      - OLLAMA_ORIGINS=*
+    volumes:
+      #Привязываем директорию на сервере к директории внутри контейнера.
+      #Все скачанные модели сохраняются в ./ollama_data
+      - ./ollama_data:/root/.ollama

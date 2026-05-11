@@ -1,0 +1,17 @@
+services:
+  wiki:
+    image: ghcr.io/requarks/wiki:2
+    container_name: wikijs
+    restart: unless-stopped
+    ports:
+      - "80:3000"
+    # Добавляем сохранение файлов
+    volumes:
+      - ./wiki-data:/wiki/storage
+    environment:
+      DB_TYPE: postgres
+      DB_HOST: 10.77.133.4 
+      DB_PORT: 5432
+      DB_USER: wikijs
+      DB_PASS: wikijs
+      DB_NAME: wikijs
