@@ -3,13 +3,17 @@ Vagrant.configure("2") do |config|
 
   # --- МАШИНА 1 (n8n) ---
   config.vm.define "n8n" do |n8n|
+    # Увеличиваем ожидание загрузки до 10 минут (600 секунд)
+    n8n.vm.boot_timeout = 600
     # Образ ОС (Ubuntu 22.04)
     n8n.vm.box = "ubuntu/jammy64"
     # Имя внутри системы
     n8n.vm.hostname = "n8n"
+    # Синхронизируем папку "n8n" из текущей директории в /home/vagrant/n8n в виртуалке
+    n8n.vm.synced_folder "./n8n", "/home/vagrant/n8n"
     # Настройка сети: задаем IP и явно прописываем маску подсети (255.255.255.240)
     n8n.vm.network "private_network", ip: "10.77.133.2", netmask: "255.255.255.240"
-	  n8n.vm.network "public_network", bridge: "Intel(R) Dual Band Wireless-AC 3165"
+	  n8n.vm.network "public_network", bridge: ""
     # Настройки для провайдера VirtualBox
     n8n.vm.provider "virtualbox" do |vb|
       # Имя виртуалки в интерфейсе VirtualBox
@@ -17,49 +21,144 @@ Vagrant.configure("2") do |config|
       # Память и ядра
       vb.memory = "1024"
       vb.cpus = 1
-	  end  
+	  end
+    # Provisioning: Установка Docker и Docker Compose
+    n8n.vm.provision "shell", inline: <<-SHELL
+      apt-get update
+      # Установка необходимых пакетов для работы с репозиториями по HTTPS
+      apt-get install -y ca-certificates curl gnupg
+      # Добавление официального GPG ключа Docker
+      install -m 0755 -d /etc/apt/keyrings
+      curl -fsSL https://docker.com | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+      chmod a+r /etc/apt/keyrings/docker.gpg
+      # Настройка репозитория
+      echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://docker.com $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null  
+      apt-get update
+      # Установка Docker Engine и Docker Compose плагина
+      apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+      # Добавление пользователя vagrant в группу docker, чтобы запускать без sudo
+      usermod -aG docker vagrant
+      # Автоматический запуск n8n, если в папке есть docker-compose.yml
+      if [ -f /home/vagrant/n8n/docker-compose.yml ]; then
+        cd /home/vagrant/n8n
+        docker compose up -d
+      fi
+    SHELL
   end
 
   # --- МАШИНА 2 (ollama) ---
   config.vm.define "ollama" do |ollama|
+    # Увеличиваем ожидание загрузки до 10 минут (600 секунд)
+    ollama.vm.boot_timeout = 600
     ollama.vm.box = "ubuntu/jammy64"
     ollama.vm.hostname = "ollama"
+    # Синхронизируем папку "ollama" из текущей директории в /home/vagrant/ollama в виртуалке
+    ollama.vm.synced_folder "./ollama", "/home/vagrant/ollama"
     # Указываем уникальный IP и ту же маску, чтобы они были в одной сети
     ollama.vm.network "private_network", ip: "10.77.133.3", netmask: "255.255.255.240"
-	  ollama.vm.network "public_network", bridge: "Intel(R) Dual Band Wireless-AC 3165"
+	  ollama.vm.network "public_network", bridge: ""
     ollama.vm.provider "virtualbox" do |vb|
       vb.name = "ollama"
       vb.memory = "4096"
       vb.cpus = 2
     end
+      # Provisioning: Установка Docker и Docker Compose
+    ollama.vm.provision "shell", inline: <<-SHELL
+      apt-get update
+      # Установка необходимых пакетов для работы с репозиториями по HTTPS
+      apt-get install -y ca-certificates curl gnupg
+      # Добавление официального GPG ключа Docker
+      install -m 0755 -d /etc/apt/keyrings
+      curl -fsSL https://docker.com | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+      chmod a+r /etc/apt/keyrings/docker.gpg
+      # Настройка репозитория
+      echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://docker.com $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null  
+      apt-get update
+      # Установка Docker Engine и Docker Compose плагина
+      apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+      # Добавление пользователя vagrant в группу docker, чтобы запускать без sudo
+      usermod -aG docker vagrant
+      # Автоматический запуск ollama, если в папке есть docker-compose.yml
+      if [ -f /home/vagrant/ollama/docker-compose.yml ]; then
+        cd /home/vagrant/ollama
+        docker compose up -d
+        sleep 30 
+        docker compose exec -t ollama ollama pull llama3.2:3b
+      fi
+    SHELL
   end
 
   # --- МАШИНА 3 (postgresql) ---
-  config.vm.define "postgresql" do |posgtresql|
-    posgtresql.vm.box = "ubuntu/jammy64"
-    posgtresql.vm.hostname = "postgresql"
+  config.vm.define "postgresql" do |postgresql|
+    # Увеличиваем ожидание загрузки до 10 минут (600 секунд)
+    postgresql.vm.boot_timeout = 600
+    postgresql.vm.box = "ubuntu/jammy64"
+    postgresql.vm.hostname = "postgresql"
     # Указываем IP и маску
-    posgtresql.vm.network "private_network", ip: "10.77.133.4", netmask: "255.255.255.240"
-	  posgtresql.vm.network "public_network", bridge: "Intel(R) Dual Band Wireless-AC 3165"
-    posgtresql.vm.provider "virtualbox" do |vb|
+    postgresql.vm.network "private_network", ip: "10.77.133.4", netmask: "255.255.255.240"
+	  postgresql.vm.network "public_network", bridge: ""
+    postgresql.vm.provider "virtualbox" do |vb|
       vb.name = "postgresql"
       vb.memory = "1024"
       vb.cpus = 1
     end
+    postgresql.vm.provision "shell", inline: <<-SHELL
+      apt-get update
+      apt-get install -y postgresql postgresql-contrib
+      # Настройка доступа: разрешаем подключения со всех IP (внутри private_network)
+      echo "listen_addresses = '*'" >> /etc/postgresql/14/main/postgresql.conf
+      echo "host all all 10.77.133.0/28 md5" >> /etc/postgresql/14/main/pg_hba.conf
+      systemctl restart postgresql
+      # Создание базы и пользователя для n8n
+      # -P 'пароль' задает пароль, -d создает базу, -O назначает владельца
+      sudo -u postgres psql -c "CREATE USER n8n WITH PASSWORD 'n8n';"
+      sudo -u postgres psql -c "CREATE DATABASE n8n_db OWNER n8n;"
+      # Создание базы и пользователя для памяти AI-агента
+      sudo -u postgres psql -c "CREATE USER ollama WITH PASSWORD 'ollama';"
+      sudo -u postgres psql -c "CREATE DATABASE ollama_db OWNER ollama;"
+      # Создание базы и пользователя для wikijs
+      sudo -u postgres psql -c "CREATE USER wikijs WITH PASSWORD 'wikijs';"
+      sudo -u postgres psql -c "CREATE DATABASE wikijs_db OWNER wikijs;"
+    SHELL
   end
 
   # --- МАШИНА 4 (wikijs) ---
   config.vm.define "wikijs" do |wikijs|
+    # Увеличиваем ожидание загрузки до 10 минут (600 секунд)
+    wikijs.vm.boot_timeout = 600
     wikijs.vm.box = "ubuntu/jammy64"
     wikijs.vm.hostname = "wikijs"
+    # Синхронизируем папку "wikijs" из текущей директории в /home/vagrant/wikijs в виртуалке
+    ollama.vm.synced_folder "./wikijs", "/home/vagrant/wikijs"
     # Указываем IP и маску
     wikijs.vm.network "private_network", ip: "10.77.133.5", netmask: "255.255.255.240"
-	  wikijs.vm.network "public_network", bridge: "Intel(R) Dual Band Wireless-AC 3165"
+	  wikijs.vm.network "public_network", bridge: ""
     wikijs.vm.provider "virtualbox" do |vb|
       vb.name = "wikijs"
       vb.memory = "1024"
       vb.cpus = 1
     end
+      wikijs.vm.provision "shell", inline: <<-SHELL
+      apt-get update
+      # Установка необходимых пакетов для работы с репозиториями по HTTPS
+      apt-get install -y ca-certificates curl gnupg
+      # Добавление официального GPG ключа Docker
+      install -m 0755 -d /etc/apt/keyrings
+      curl -fsSL https://docker.com | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+      chmod a+r /etc/apt/keyrings/docker.gpg
+      # Настройка репозитория
+      echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://docker.com $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null  
+      apt-get update
+      # Установка Docker Engine и Docker Compose плагина
+      apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+      # Добавление пользователя vagrant в группу docker, чтобы запускать без sudo
+      usermod -aG docker vagrant
+      # Автоматический запуск wikijs, если в папке есть docker-compose.yml
+      if [ -f /home/vagrant/wikijs/docker-compose.yml ]; then
+        cd /home/vagrant/wikijs
+        docker compose up -d
+      fi
+    SHELL
   end
   
 end
