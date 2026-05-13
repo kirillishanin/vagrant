@@ -13,7 +13,7 @@ Vagrant.configure("2") do |config|
     n8n.vm.synced_folder "./n8n", "/home/vagrant/n8n"
     # Настройка сети: задаем IP и явно прописываем маску подсети (255.255.255.240)
     n8n.vm.network "private_network", ip: "10.77.133.2", netmask: "255.255.255.240"
-	  n8n.vm.network "public_network", bridge: ""
+	  #n8n.vm.network "public_network", bridge: ""
     # Настройки для провайдера VirtualBox
     n8n.vm.provider "virtualbox" do |vb|
       # Имя виртуалки в интерфейсе VirtualBox
@@ -25,24 +25,30 @@ Vagrant.configure("2") do |config|
     # Provisioning: Установка Docker и Docker Compose
     n8n.vm.provision "shell", inline: <<-SHELL
       apt-get update
-      # Установка необходимых пакетов для работы с репозиториями по HTTPS
-      apt-get install -y ca-certificates curl gnupg
-      # Добавление официального GPG ключа Docker
+      # Пакеты
+      apt-get install -y ca-certificates curl gnupg lsb-release
+      # Ключ Docker
       install -m 0755 -d /etc/apt/keyrings
-      curl -fsSL https://docker.com | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+      curl -fsSL https://download.docker.com/linux/ubuntu/gpg | \
+      gpg --batch --yes --dearmor -o /etc/apt/keyrings/docker.gpg
       chmod a+r /etc/apt/keyrings/docker.gpg
-      # Настройка репозитория
-      echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://docker.com $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null  
+      # Репозиторий Docker
+      echo \
+        "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] \
+        https://download.docker.com/linux/ubuntu \
+        $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
+        tee /etc/apt/sources.list.d/docker.list > /dev/null
+      # Обновление индекса
       apt-get update
-      # Установка Docker Engine и Docker Compose плагина
+      # Docker
       apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
-      # Добавление пользователя vagrant в группу docker, чтобы запускать без sudo
+      # Группа docker
       usermod -aG docker vagrant
       # Автоматический запуск n8n, если в папке есть docker-compose.yml
-      if [ -f /home/vagrant/n8n/docker-compose.yml ]; then
+        if [ -f /home/vagrant/n8n/docker-compose.yml ]; then
         cd /home/vagrant/n8n
         docker compose up -d
-      fi
+        fi
     SHELL
   end
 
@@ -56,7 +62,7 @@ Vagrant.configure("2") do |config|
     ollama.vm.synced_folder "./ollama", "/home/vagrant/ollama"
     # Указываем уникальный IP и ту же маску, чтобы они были в одной сети
     ollama.vm.network "private_network", ip: "10.77.133.3", netmask: "255.255.255.240"
-	  ollama.vm.network "public_network", bridge: ""
+	  #ollama.vm.network "public_network", bridge: ""
     ollama.vm.provider "virtualbox" do |vb|
       vb.name = "ollama"
       vb.memory = "4096"
@@ -65,18 +71,24 @@ Vagrant.configure("2") do |config|
       # Provisioning: Установка Docker и Docker Compose
     ollama.vm.provision "shell", inline: <<-SHELL
       apt-get update
-      # Установка необходимых пакетов для работы с репозиториями по HTTPS
-      apt-get install -y ca-certificates curl gnupg
-      # Добавление официального GPG ключа Docker
+      # Пакеты
+      apt-get install -y ca-certificates curl gnupg lsb-release
+      # Ключ Docker
       install -m 0755 -d /etc/apt/keyrings
-      curl -fsSL https://docker.com | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+      curl -fsSL https://download.docker.com/linux/ubuntu/gpg | \
+      gpg --batch --yes --dearmor -o /etc/apt/keyrings/docker.gpg
       chmod a+r /etc/apt/keyrings/docker.gpg
-      # Настройка репозитория
-      echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://docker.com $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null  
+      # Репозиторий Docker
+      echo \
+        "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] \
+        https://download.docker.com/linux/ubuntu \
+        $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
+        tee /etc/apt/sources.list.d/docker.list > /dev/null
+      # Обновление индекса
       apt-get update
-      # Установка Docker Engine и Docker Compose плагина
+      # Docker
       apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
-      # Добавление пользователя vagrant в группу docker, чтобы запускать без sudo
+      # Группа docker
       usermod -aG docker vagrant
       # Автоматический запуск ollama, если в папке есть docker-compose.yml
       if [ -f /home/vagrant/ollama/docker-compose.yml ]; then
@@ -96,7 +108,7 @@ Vagrant.configure("2") do |config|
     postgresql.vm.hostname = "postgresql"
     # Указываем IP и маску
     postgresql.vm.network "private_network", ip: "10.77.133.4", netmask: "255.255.255.240"
-	  postgresql.vm.network "public_network", bridge: ""
+	  #postgresql.vm.network "public_network", bridge: ""
     postgresql.vm.provider "virtualbox" do |vb|
       vb.name = "postgresql"
       vb.memory = "1024"
@@ -129,28 +141,36 @@ Vagrant.configure("2") do |config|
     wikijs.vm.box = "ubuntu/jammy64"
     wikijs.vm.hostname = "wikijs"
     # Синхронизируем папку "wikijs" из текущей директории в /home/vagrant/wikijs в виртуалке
-    ollama.vm.synced_folder "./wikijs", "/home/vagrant/wikijs"
+    wikijs.vm.synced_folder "./wikijs", "/home/vagrant/wikijs"
     # Указываем IP и маску
     wikijs.vm.network "private_network", ip: "10.77.133.5", netmask: "255.255.255.240"
-	  wikijs.vm.network "public_network", bridge: ""
+	  #wikijs.vm.network "public_network", bridge: ""
     wikijs.vm.provider "virtualbox" do |vb|
       vb.name = "wikijs"
       vb.memory = "1024"
       vb.cpus = 1
     end
-      wikijs.vm.provision "shell", inline: <<-SHELL
+    wikijs.vm.provision "shell", inline: <<-SHELL
       apt-get update
-      # Установка необходимых пакетов для работы с репозиториями по HTTPS
-      apt-get install -y ca-certificates curl gnupg
-      # Добавление официального GPG ключа Docker
+      # Пакеты
+      apt-get install -y ca-certificates curl gnupg lsb-release
+      # Ключ Docker
       install -m 0755 -d /etc/apt/keyrings
-      curl -fsSL https://docker.com | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+      curl -fsSL https://download.docker.com/linux/ubuntu/gpg | \
+      gpg --batch --yes --dearmor -o /etc/apt/keyrings/docker.gpg
       chmod a+r /etc/apt/keyrings/docker.gpg
-      # Настройка репозитория
-      echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://docker.com $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null  
+      # Репозиторий Docker
+      echo \
+        "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] \
+        https://download.docker.com/linux/ubuntu \
+        $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
+        tee /etc/apt/sources.list.d/docker.list > /dev/null
+      # Обновление индекса
       apt-get update
-      # Установка Docker Engine и Docker Compose плагина
+      # Docker
       apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+      # Группа docker
+      usermod -aG docker vagrant
       # Добавление пользователя vagrant в группу docker, чтобы запускать без sudo
       usermod -aG docker vagrant
       # Автоматический запуск wikijs, если в папке есть docker-compose.yml
