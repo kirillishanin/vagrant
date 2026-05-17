@@ -31,9 +31,7 @@
 
 ---
 
-## Idempotent Provisioning
-
-Provisioning безопасен для повторного запуска:
+## Provisioning безопасен для повторного запуска:
 
 ```bash
 vagrant provision
