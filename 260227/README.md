@@ -1,5 +1,8 @@
 Структура проекта:
 
+## Project Structure
+
+```text
 260227/
 │
 ├── Vagrantfile
@@ -18,7 +21,7 @@
 │
 └── wikijs/
     └── docker-compose.yml
-
+```
 
 Вся инфраструктура описана декларативно через {IaC}:
 Vagrantfile
