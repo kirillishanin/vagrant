@@ -1,12 +1,9 @@
 #!/usr/bin/env bash
-
+#Подключаем наш common.sh
 source /opt/provision/common.sh
-
 log "Starting PostgreSQL provisioning"
 
-# =========================================================
-# CHECK POSTGRESQL
-# =========================================================
+#Проверяем установлен ли posgresql
 
 if command_exists psql; then
 
@@ -22,19 +19,14 @@ else
 
 fi
 
-# =========================================================
-# DETECT POSTGRES VERSION
-# =========================================================
+# Определяем версию
 
 PG_VERSION=$(ls /etc/postgresql)
-
+# Назначаем переменные
 POSTGRES_CONF="/etc/postgresql/${PG_VERSION}/main/postgresql.conf"
 PG_HBA_CONF="/etc/postgresql/${PG_VERSION}/main/pg_hba.conf"
 
-# =========================================================
-# CONFIGURE POSTGRESQL
-# =========================================================
-
+# Меняем конфигурацию 
 if ! grep -q "listen_addresses = '*'" "${POSTGRES_CONF}"; then
 
     echo "listen_addresses = '*'" >> "${POSTGRES_CONF}"
@@ -49,10 +41,7 @@ fi
 
 systemctl restart postgresql
 
-# =========================================================
-# HELPER FUNCTIONS
-# =========================================================
-
+# Дополнительные функции
 create_pg_user() {
 
     local USERNAME=$1
@@ -95,17 +84,13 @@ create_pg_database() {
     fi
 }
 
-# =========================================================
-# CREATE USERS
-# =========================================================
+# Создаем пользователй:
 
 create_pg_user n8n n8n
 create_pg_user ollama ollama
 create_pg_user wikijs wikijs
 
-# =========================================================
-# CREATE DATABASES
-# =========================================================
+# Создаем базы данных:
 
 create_pg_database n8n_db n8n
 create_pg_database ollama_db ollama

@@ -1,184 +1,124 @@
-# Указываем версию API конфигурации Vagrant
 Vagrant.configure("2") do |config|
 
-  # --- МАШИНА 1 (n8n) ---
+  # Глобальные установки:
+
+  BOX_NAME       = "ubuntu/jammy64"
+  NETWORK_PREFIX = "10.77.133"
+  NETMASK        = "255.255.255.240"
+  BOOT_TIMEOUT   = 600
+  # Отключаем дефолт синх. директории
+  config.vm.synced_folder ".", "/vagrant", disabled: true
+  # Унифицированное создание VM
+  def create_vm(vm, params)
+    # Базывоные настройки VM
+    vm.vm.box          = BOX_NAME
+    vm.vm.hostname     = params[:hostname]
+    vm.vm.boot_timeout = BOOT_TIMEOUT
+    # Private Network
+    vm.vm.network "private_network",
+      ip: "#{NETWORK_PREFIX}.#{params[:ip]}",
+      netmask: NETMASK
+    #publick_network
+    if params[:public_network]
+      vm.vm.network "public_network"
+    end
+    # sync folder
+    if params[:sync_folder]
+
+      vm.vm.synced_folder(
+        "./#{params[:sync_folder]}",
+        "/home/vagrant/#{params[:sync_folder]}"
+      )
+
+    end
+
+    # Provision scripts
+
+    vm.vm.synced_folder(
+      "./provision",
+      "/opt/provision",
+      create: true
+    )
+
+    # Настройки virtualbox
+
+    vm.vm.provider "virtualbox" do |vb|
+
+      vb.name   = params[:name]
+      vb.memory = params[:memory]
+      vb.cpus   = params[:cpus]
+
+    end
+
+    #PROVISION
+    vm.vm.provision "shell",
+      path: params[:provision]
+
+  end
+  # n8n VM
   config.vm.define "n8n" do |n8n|
-    # Увеличиваем ожидание загрузки до 10 минут (600 секунд)
-    n8n.vm.boot_timeout = 600
-    # Образ ОС (Ubuntu 22.04)
-    n8n.vm.box = "ubuntu/jammy64"
-    # Имя внутри системы
-    n8n.vm.hostname = "n8n"
-    # Синхронизируем папку "n8n" из текущей директории в /home/vagrant/n8n в виртуалке
-    n8n.vm.synced_folder "./n8n", "/home/vagrant/n8n"
-    # Настройка сети: задаем IP и явно прописываем маску подсети (255.255.255.240)
-    n8n.vm.network "private_network", ip: "10.77.133.2", netmask: "255.255.255.240"
-	  #n8n.vm.network "public_network", bridge: ""
-    # Настройки для провайдера VirtualBox
-    n8n.vm.provider "virtualbox" do |vb|
-      # Имя виртуалки в интерфейсе VirtualBox
-      vb.name = "n8n"
-      # Память и ядра
-      vb.memory = "1024"
-      vb.cpus = 1
-	  end
-    # Provisioning: Установка Docker и Docker Compose
-    n8n.vm.provision "shell", inline: <<-SHELL
-      apt-get update
-      # Пакеты
-      apt-get install -y ca-certificates curl gnupg lsb-release
-      # Ключ Docker
-      install -m 0755 -d /etc/apt/keyrings
-      curl -fsSL https://download.docker.com/linux/ubuntu/gpg | \
-      gpg --batch --yes --dearmor -o /etc/apt/keyrings/docker.gpg
-      chmod a+r /etc/apt/keyrings/docker.gpg
-      # Репозиторий Docker
-      echo \
-        "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] \
-        https://download.docker.com/linux/ubuntu \
-        $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
-        tee /etc/apt/sources.list.d/docker.list > /dev/null
-      # Обновление индекса
-      apt-get update
-      # Docker
-      apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
-      # Группа docker
-      usermod -aG docker vagrant
-      # Автоматический запуск n8n, если в папке есть docker-compose.yml
-        if [ -f /home/vagrant/n8n/docker-compose.yml ]; then
-        cd /home/vagrant/n8n
-        docker compose up -d
-        fi
-    SHELL
+
+    create_vm(n8n,
+      name: "n8n",
+      hostname: "n8n",
+      ip: 2,
+      memory: 2048,
+      cpus: 1,
+      sync_folder: "n8n",
+      public_network: false,
+      provision: "provision/docker.sh"
+    )
+
   end
 
-  # --- МАШИНА 2 (ollama) ---
+  # ollama vm
+
   config.vm.define "ollama" do |ollama|
-    # Увеличиваем ожидание загрузки до 10 минут (600 секунд)
-    ollama.vm.boot_timeout = 600
-    ollama.vm.box = "ubuntu/jammy64"
-    ollama.vm.hostname = "ollama"
-    # Синхронизируем папку "ollama" из текущей директории в /home/vagrant/ollama в виртуалке
-    ollama.vm.synced_folder "./ollama", "/home/vagrant/ollama"
-    # Указываем уникальный IP и ту же маску, чтобы они были в одной сети
-    ollama.vm.network "private_network", ip: "10.77.133.3", netmask: "255.255.255.240"
-	  #ollama.vm.network "public_network", bridge: ""
-    ollama.vm.provider "virtualbox" do |vb|
-      vb.name = "ollama"
-      vb.memory = "4096"
-      vb.cpus = 2
-    end
-      # Provisioning: Установка Docker и Docker Compose
-    ollama.vm.provision "shell", inline: <<-SHELL
-      apt-get update
-      # Пакеты
-      apt-get install -y ca-certificates curl gnupg lsb-release
-      # Ключ Docker
-      install -m 0755 -d /etc/apt/keyrings
-      curl -fsSL https://download.docker.com/linux/ubuntu/gpg | \
-      gpg --batch --yes --dearmor -o /etc/apt/keyrings/docker.gpg
-      chmod a+r /etc/apt/keyrings/docker.gpg
-      # Репозиторий Docker
-      echo \
-        "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] \
-        https://download.docker.com/linux/ubuntu \
-        $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
-        tee /etc/apt/sources.list.d/docker.list > /dev/null
-      # Обновление индекса
-      apt-get update
-      # Docker
-      apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
-      # Группа docker
-      usermod -aG docker vagrant
-      # Автоматический запуск ollama, если в папке есть docker-compose.yml
-      if [ -f /home/vagrant/ollama/docker-compose.yml ]; then
-        cd /home/vagrant/ollama
-        docker compose up -d
-        sleep 30 
-        docker compose exec -t ollama ollama pull llama3.2:3b
-      fi
-    SHELL
+
+    create_vm(ollama,
+      name: "ollama",
+      hostname: "ollama",
+      ip: 3,
+      memory: 8192,
+      cpus: 2,
+      sync_folder: "ollama",
+      public_network: false,
+      provision: "provision/ollama.sh"
+    )
+
   end
 
-  # --- МАШИНА 3 (postgresql) ---
+  # postgresql vm
+
   config.vm.define "postgresql" do |postgresql|
-    # Увеличиваем ожидание загрузки до 10 минут (600 секунд)
-    postgresql.vm.boot_timeout = 600
-    postgresql.vm.box = "ubuntu/jammy64"
-    postgresql.vm.hostname = "postgresql"
-    # Указываем IP и маску
-    postgresql.vm.network "private_network", ip: "10.77.133.4", netmask: "255.255.255.240"
-	  #postgresql.vm.network "public_network", bridge: ""
-    postgresql.vm.provider "virtualbox" do |vb|
-      vb.name = "postgresql"
-      vb.memory = "1024"
-      vb.cpus = 1
-    end
-    postgresql.vm.provision "shell", inline: <<-SHELL
-      apt-get update
-      apt-get install -y postgresql postgresql-contrib
-      # Настройка доступа: разрешаем подключения со всех IP (внутри private_network)
-      echo "listen_addresses = '*'" >> /etc/postgresql/14/main/postgresql.conf
-      echo "host all all 10.77.133.0/28 md5" >> /etc/postgresql/14/main/pg_hba.conf
-      systemctl restart postgresql
-      # Создание базы и пользователя для n8n
-      # -P 'пароль' задает пароль, -d создает базу, -O назначает владельца
-      sudo -u postgres psql -c "CREATE USER n8n WITH PASSWORD 'n8n';"
-      sudo -u postgres psql -c "CREATE DATABASE n8n_db OWNER n8n;"
-      # Создание базы и пользователя для памяти AI-агента
-      sudo -u postgres psql -c "CREATE USER ollama WITH PASSWORD 'ollama';"
-      sudo -u postgres psql -c "CREATE DATABASE ollama_db OWNER ollama;"
-      # Создание базы и пользователя для wikijs
-      sudo -u postgres psql -c "CREATE USER wikijs WITH PASSWORD 'wikijs';"
-      sudo -u postgres psql -c "CREATE DATABASE wikijs_db OWNER wikijs;"
-    SHELL
+
+    create_vm(postgresql,
+      name: "postgresql",
+      hostname: "postgresql",
+      ip: 4,
+      memory: 1024,
+      cpus: 1,
+      public_network: false,
+      provision: "provision/postgres.sh"
+    )
+
   end
 
-  # --- МАШИНА 4 (wikijs) ---
+  # wikijs vm
+
   config.vm.define "wikijs" do |wikijs|
-    # Увеличиваем ожидание загрузки до 10 минут (600 секунд)
-    wikijs.vm.boot_timeout = 600
-    wikijs.vm.box = "ubuntu/jammy64"
-    wikijs.vm.hostname = "wikijs"
-    # Синхронизируем папку "wikijs" из текущей директории в /home/vagrant/wikijs в виртуалке
-    wikijs.vm.synced_folder "./wikijs", "/home/vagrant/wikijs"
-    # Указываем IP и маску
-    wikijs.vm.network "private_network", ip: "10.77.133.5", netmask: "255.255.255.240"
-	  #wikijs.vm.network "public_network", bridge: ""
-    wikijs.vm.provider "virtualbox" do |vb|
-      vb.name = "wikijs"
-      vb.memory = "1024"
-      vb.cpus = 1
-    end
-    wikijs.vm.provision "shell", inline: <<-SHELL
-      apt-get update
-      # Пакеты
-      apt-get install -y ca-certificates curl gnupg lsb-release
-      # Ключ Docker
-      install -m 0755 -d /etc/apt/keyrings
-      curl -fsSL https://download.docker.com/linux/ubuntu/gpg | \
-      gpg --batch --yes --dearmor -o /etc/apt/keyrings/docker.gpg
-      chmod a+r /etc/apt/keyrings/docker.gpg
-      # Репозиторий Docker
-      echo \
-        "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] \
-        https://download.docker.com/linux/ubuntu \
-        $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
-        tee /etc/apt/sources.list.d/docker.list > /dev/null
-      # Обновление индекса
-      apt-get update
-      # Docker
-      apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
-      # Группа docker
-      usermod -aG docker vagrant
-      # Добавление пользователя vagrant в группу docker, чтобы запускать без sudo
-      usermod -aG docker vagrant
-      # Автоматический запуск wikijs, если в папке есть docker-compose.yml
-      if [ -f /home/vagrant/wikijs/docker-compose.yml ]; then
-        cd /home/vagrant/wikijs
-        docker compose up -d
-      fi
-    SHELL
+
+    create_vm(wikijs,
+      name: "wikijs",
+      hostname: "wikijs",
+      ip: 5,
+      memory: 1024,
+      cpus: 1,
+      sync_folder: "wikijs",
+      public_network: false,
+      provision: "provision/docker.sh"
+    )
+
   end
-  
+
 end

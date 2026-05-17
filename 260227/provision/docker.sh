@@ -1,11 +1,14 @@
 #!/usr/bin/env bash
-
-set -e
-
-echo "================================================="
-echo "INSTALLING DOCKER"
-echo "================================================="
-
+#Подключаем наш common.sh
+source /opt/provision/common.sh
+#Вывод и проверка работы фукцнии логирования
+log "Starting Docker provisioning"
+# Проверка установлен ли докер
+if command_exists docker; then
+    log "Docker already installed"
+    exit 0
+fi
+# Установка зависимостей:
 apt-get update
 
 apt-get install -y \
@@ -13,11 +16,7 @@ apt-get install -y \
     curl \
     gnupg \
     lsb-release
-
-# =========================================================
-# DOCKER GPG KEY
-# =========================================================
-
+# Добавляем gpg key
 install -m 0755 -d /etc/apt/keyrings
 
 curl -fsSL https://download.docker.com/linux/ubuntu/gpg \
@@ -25,11 +24,7 @@ curl -fsSL https://download.docker.com/linux/ubuntu/gpg \
     -o /etc/apt/keyrings/docker.gpg
 
 chmod a+r /etc/apt/keyrings/docker.gpg
-
-# =========================================================
-# DOCKER REPOSITORY
-# =========================================================
-
+# Подключаем репозиторий докера
 echo \
   "deb [arch=$(dpkg --print-architecture) \
   signed-by=/etc/apt/keyrings/docker.gpg] \
@@ -38,11 +33,7 @@ echo \
   | tee /etc/apt/sources.list.d/docker.list > /dev/null
 
 apt-get update
-
-# =========================================================
-# INSTALL DOCKER
-# =========================================================
-
+# Установка докер
 apt-get install -y \
     docker-ce \
     docker-ce-cli \
@@ -50,15 +41,24 @@ apt-get install -y \
     docker-buildx-plugin \
     docker-compose-plugin
 
-# =========================================================
-# ENABLE DOCKER
-# =========================================================
-
+# Включаем сервисы, добавляем автозапуск
 systemctl enable docker
 systemctl start docker
+# Добавляем пользователя vagrant в группу docker
 
 usermod -aG docker vagrant
 
-echo "================================================="
-echo "DOCKER INSTALLED"
-echo "================================================="
+log "Docker installed successfully"
+# Поиск директории
+APP_DIR=$(find /home/vagrant -maxdepth 1 -type d | tail -n 1)
+# Поиск docker-compose.yml внутри найденой директории, и его запускю.
+if [ -f "${APP_DIR}/docker-compose.yml" ]; then
+    cd "${APP_DIR}"
+    STACK_NAME=$(basename "${APP_DIR}")
+    if docker ps -a --format '{{.Names}}' | grep -q "^${STACK_NAME}$"; then
+        log "Container ${STACK_NAME} already exists"
+    else
+        log "Starting Docker Compose stack"
+        docker compose up -d
+    fi
+fi

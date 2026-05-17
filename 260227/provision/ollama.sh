@@ -4,15 +4,11 @@ source /opt/provision/common.sh
 
 log "Starting Ollama provisioning"
 
-# =========================================================
-# INSTALL DOCKER
-# =========================================================
+# Установка докера
 
 bash /opt/provision/docker.sh
 
-# =========================================================
-# START OLLAMA STACK
-# =========================================================
+# Запуск ollama
 
 cd /home/vagrant/ollama
 
@@ -32,9 +28,7 @@ else
 
 fi
 
-# =========================================================
-# DOWNLOAD MODEL
-# =========================================================
+# Качаем модель
 
 if docker exec ollama ollama list \
     | grep -q "llama3.2:3b"; then
