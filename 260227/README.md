@@ -22,6 +22,6 @@
 ```
 
 Вся инфраструктура описана декларативно через {IaC}:
-Vagrantfile
-provisioning scripts
-docker-compose
+\Vagrantfile
+\provisioning scripts
+\docker-compose
