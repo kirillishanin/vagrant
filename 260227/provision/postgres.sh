@@ -19,15 +19,14 @@ else
 
 fi
 
-# Определяем версию
-
-PG_VERSION=$(ls /etc/postgresql)
+# Определяем версию (берём единственную установленную версию)
+PG_VERSION=$(ls /etc/postgresql | head -n 1)
 # Назначаем переменные
 POSTGRES_CONF="/etc/postgresql/${PG_VERSION}/main/postgresql.conf"
 PG_HBA_CONF="/etc/postgresql/${PG_VERSION}/main/pg_hba.conf"
 
-# Меняем конфигурацию 
-if ! grep -q "listen_addresses = '*'" "${POSTGRES_CONF}"; then
+# Меняем конфигурацию
+if ! grep -qF "listen_addresses = '*'" "${POSTGRES_CONF}"; then
 
     echo "listen_addresses = '*'" >> "${POSTGRES_CONF}"
 
@@ -87,13 +86,11 @@ create_pg_database() {
 # Создаем пользователй:
 
 create_pg_user n8n n8n
-create_pg_user ollama ollama
 create_pg_user wikijs wikijs
 
 # Создаем базы данных:
 
 create_pg_database n8n_db n8n
-create_pg_database ollama_db ollama
 create_pg_database wikijs_db wikijs
 
 log "PostgreSQL provisioning completed"

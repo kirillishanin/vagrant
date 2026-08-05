@@ -13,3 +13,5 @@ services:
       DB_USER: wikijs
       DB_PASS: wikijs
       DB_NAME: wikijs_db
+    volumes:
+      - ./wikijs-data:/var/lib/wiki

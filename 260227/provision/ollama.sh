@@ -6,7 +6,7 @@ log "Starting Ollama provisioning"
 
 # Установка докера
 
-bash /opt/provision/docker.sh
+bash /opt/provision/docker.sh ollama
 
 # Запуск ollama
 

@@ -52,7 +52,8 @@ Vagrant.configure("2") do |config|
 
     #PROVISION
     vm.vm.provision "shell",
-      path: params[:provision]
+      path: params[:provision],
+      args: params[:provision_args]
 
   end
    # postgresql vm
@@ -98,7 +99,8 @@ Vagrant.configure("2") do |config|
       cpus: 1,
       sync_folder: "n8n",
       public_network: false,
-      provision: "provision/docker.sh"
+      provision: "provision/docker.sh",
+      provision_args: "n8n"
     )
 
   end
@@ -115,7 +117,8 @@ Vagrant.configure("2") do |config|
       cpus: 1,
       sync_folder: "wikijs",
       public_network: false,
-      provision: "provision/docker.sh"
+      provision: "provision/docker.sh",
+      provision_args: "wikijs"
     )
 
   end
